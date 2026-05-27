@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>CIPAT Challenge</title>
+<style>
+    body{
+        margin:0;
+        font-family:Arial, sans-serif;
+        background:#0f172a;
+        color:white;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        min-height:100vh;
+        padding:15px;
+        box-sizing:border-box;
+    }
+
+    .card{
+        width:100%;
+        max-width:420px;
+        background:#1e293b;
+        border-radius:20px;
+        padding:24px;
+        box-sizing:border-box;
+        box-shadow:0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    h1,h2{
+        text-align:center;
+    }
+
+    .btn{
+        width:100%;
+        border:none;
+        border-radius:14px;
+        padding:16px;
+        margin-top:12px;
+        font-size:16px;
+        cursor:pointer;
+        background:#22c55e;
+        color:white;
+        font-weight:bold;
+    }
+
+    .btn:hover{
+        opacity:0.9;
+    }
+
+    .option{
+        background:#334155;
+    }
+
+    .score{
+        font-size:20px;
+        text-align:center;
+        margin:10px 0;
+    }
+
+    .timer{
+        text-align:center;
+        margin-bottom:15px;
+        font-size:18px;
+    }
+
+    input{
+        width:100%;
+        padding:14px;
+        border-radius:12px;
+        border:none;
+        margin-top:10px;
+        box-sizing:border-box;
+        font-size:16px;
+    }
+
+    ol{
+        padding-left:20px;
+    }
+
+    li{
+        margin-bottom:8px;
+    }
+
+    .hidden{
+        display:none;
+    }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+    <div id="startScreen">
+        <h1>🏆 CIPAT Challenge</h1>
+        <p style="text-align:center;">
+            Responda rápido e faça a maior pontuação!
+        </p>
+
+        <input type="text" id="playerName" placeholder="Digite seu nome" />
+
+        <button class="btn" onclick="startGame()">Começar</button>
+
+        <h2>Ranking Local</h2>
+        <ol id="ranking"></ol>
+    </div>
+
+    <div id="gameScreen" class="hidden">
+        <div class="timer">⏱ Tempo: <span id="time">30</span>s</div>
+        <div class="score">⭐ Pontos: <span id="score">0</span></div>
+
+        <h2 id="question"></h2>
+
+        <div id="options"></div>
+    </div>
+
+    <div id="endScreen" class="hidden">
+        <h1>Fim de jogo!</h1>
+
+        <p class="score">
+            Sua pontuação: <span id="finalScore"></span>
+        </p>
+
+        <button class="btn" onclick="restartGame()">Jogar Novamente</button>
+    </div>
+
+</div>
+
+<script>
+
+const questions = [
+    {
+        q: "Qual EPI protege os olhos?",
+        options: ["Capacete", "Óculos de proteção", "Bota", "Luva"],
+        answer: 1
+    },
+    {
+        q: "O que fazer em piso molhado?",
+        options: ["Correr", "Ignorar", "Sinalizar", "Pular"],
+        answer: 2
+    },
+    {
+        q: "Qual item protege as mãos?",
+        options: ["Luva", "Máscara", "Cinto", "Óculos"],
+        answer: 0
+    },
+    {
+        q: "Incêndio elétrico usa:",
+        options: ["Água", "Extintor correto", "Pano", "Areia"],
+        answer: 1
+    },
+    {
+        q: "Fio desencapado representa:",
+        options: ["Segurança", "Risco elétrico", "Organização", "Nenhum risco"],
+        answer: 1
+    }
+];
+
+let currentQuestion = 0;
+let score = 0;
+let timeLeft = 30;
+let timer;
+
+function startGame(){
+
+    const name = document.getElementById("playerName").value.trim();
+
+    if(name === ""){
+        alert("Digite seu nome!");
+        return;
+    }
+
+    localStorage.setItem("cipatPlayer", name);
+
+    document.getElementById("startScreen").classList.add("hidden");
+    document.getElementById("gameScreen").classList.remove("hidden");
+
+    score = 0;
+    currentQuestion = 0;
+    timeLeft = 30;
+
+    updateScore();
+    showQuestion();
+
+    timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("time").innerText = timeLeft;
+
+        if(timeLeft <= 0){
+            endGame();
+        }
+
+    },1000);
+}
+
+function showQuestion(){
+
+    const q = questions[currentQuestion];
+
+    document.getElementById("question").innerText = q.q;
+
+    const optionsDiv = document.getElementById("options");
+    optionsDiv.innerHTML = "";
+
+    q.options.forEach((option,index)=>{
+
+        const btn = document.createElement("button");
+        btn.className = "btn option";
+        btn.innerText = option;
+
+        btn.onclick = () => {
+
+            if(index === q.answer){
+                score += 100;
+            }else{
+                score -= 30;
+                if(score < 0) score = 0;
+            }
+
+            updateScore();
+
+            currentQuestion++;
+
+            if(currentQuestion >= questions.length){
+                currentQuestion = 0;
+            }
+
+            showQuestion();
+        };
+
+        optionsDiv.appendChild(btn);
+    });
+}
+
+function updateScore(){
+    document.getElementById("score").innerText = score;
+}
+
+function endGame(){
+
+    clearInterval(timer);
+
+    document.getElementById("gameScreen").classList.add("hidden");
+    document.getElementById("endScreen").classList.remove("hidden");
+
+    document.getElementById("finalScore").innerText = score;
+
+    saveRanking();
+}
+
+function saveRanking(){
+
+    const name = localStorage.getItem("cipatPlayer");
+
+    let ranking = JSON.parse(localStorage.getItem("cipatRanking")) || [];
+
+    ranking.push({
+        name:name,
+        score:score
+    });
+
+    ranking.sort((a,b)=> b.score - a.score);
+
+    ranking = ranking.slice(0,10);
+
+    localStorage.setItem("cipatRanking", JSON.stringify(ranking));
+}
+
+function loadRanking(){
+
+    const ranking = JSON.parse(localStorage.getItem("cipatRanking")) || [];
+
+    const rankingList = document.getElementById("ranking");
+
+    rankingList.innerHTML = "";
+
+    ranking.forEach(player => {
+
+        const li = document.createElement("li");
+
+        li.innerText = `${player.name} - ${player.score} pts`;
+
+        rankingList.appendChild(li);
+    });
+}
+
+function restartGame(){
+
+    document.getElementById("endScreen").classList.add("hidden");
+    document.getElementById("startScreen").classList.remove("hidden");
+
+    loadRanking();
+}
+
+loadRanking();
+
+</script>
+
+</body>
+</html>
